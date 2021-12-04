@@ -41,6 +41,10 @@ module.exports = {
       quota: {
         type: Sequelize.INTEGER
       },
+      maxQuota: {
+        allowNull: false,
+        type: Sequelize.INTEGER,
+      },
       price: {
         type: Sequelize.INTEGER
       },

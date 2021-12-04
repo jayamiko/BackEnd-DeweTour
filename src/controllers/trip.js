@@ -7,19 +7,21 @@ exports.addTrip = async (req, res) => {
     const schema = Joi.object({
         title: Joi.string().min(5).required(),
         idCountry: Joi.number().required(),
-        accomodation: Joi.string().min(5),
-        transportation: Joi.string().min(5),
-        eat: Joi.string().min(5),
+        accomodation: Joi.string().min(5).required(),
+        transportation: Joi.string().min(5).required(),
+        eat: Joi.string().min(5).required(),
         day: Joi.number().required(),
         night: Joi.number().required(),
         dateTrip: Joi.date().required(),
         price: Joi.number().required(),
         quota: Joi.number().required(),
-        description: Joi.string().min(10).max(1000),
+        maxQuota: Joi.number().required(),
+        description: Joi.string().min(10).max(1000).required(),
     });
 
     const { error } = schema.validate(req.body);
 
+    // check if error return response 400
     if (error) {
         console.log(error);
         return res.status(400).send({
@@ -50,7 +52,7 @@ exports.addTrip = async (req, res) => {
                 },
             },
             attributes: {
-                exclude: ["createdAt", "updatedAt", "countryId"],
+                exclude: ["createdAt", "updatedAt", "idCountry"],
             },
         });
 
@@ -60,7 +62,7 @@ exports.addTrip = async (req, res) => {
             ...tripData,
             image: JSON.parse(tripData.image).map((image, index) => ({
                 id: index + 1,
-                url: process.env.PATH_TRIP_IMAGES + image,
+                url: "http://localhost:5000/uploads/" + image,
             })),
         };
 
@@ -89,7 +91,18 @@ exports.getTrips = async (req, res) => {
                 },
             },
             attributes: {
-                exclude: ["createdAt", "updatedAt", "idCountry"],
+                exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "idCountry",
+                    "accomodation",
+                    "transportation",
+                    "eat",
+                    "day",
+                    "night",
+                    "dateTrip",
+                    "description",
+                ],
             },
         });
 
@@ -101,15 +114,10 @@ exports.getTrips = async (req, res) => {
             country: item.country,
             price: item.price,
             quota: item.quota,
-            day: item.day,
-            night: item.night,
-            accomodation: item.accomodation,
-            eat: item.eat,
-            transpotation: item.transpotation,
-            dateTrip: item.dateTrip,
+            maxQuota: item.maxQuota,
             image: JSON.parse(item.image).map((image, index) => ({
                 id: index + 1,
-                url: process.env.PATH_TRIP_IMAGES + image,
+                url: "http://localhost:5000/uploads/" + image,
             })),
         }));
 
@@ -118,22 +126,23 @@ exports.getTrips = async (req, res) => {
             data: newData,
         });
     } catch (error) {
-        console.log(error),
-            res.status(500).send({
-                status: "failed",
-                message: "server error",
-            });
+        console.log(error);
+        res.status(500).send({
+            status: "failed",
+            message: "Server error",
+        });
     }
 };
 
 exports.getTrip = async (req, res) => {
-    const { id } = req.params
+    const { id } = req.params;
 
     try {
         let data = await trip.findOne({
             where: {
-                id
-            }, include: {
+                id,
+            },
+            include: {
                 model: country,
                 as: "country",
                 attributes: {
@@ -141,9 +150,9 @@ exports.getTrip = async (req, res) => {
                 },
             },
             attributes: {
-                exclude: ["createdAt", "updatedAt", "countryId"],
+                exclude: ["createdAt", "updatedAt", "idCountry"],
             },
-        })
+        });
 
         data = JSON.parse(JSON.stringify(data));
 
@@ -151,98 +160,94 @@ exports.getTrip = async (req, res) => {
             ...data,
             image: JSON.parse(data.image).map((image, index) => ({
                 id: index + 1,
-                url: process.env.PATH_TRIP_IMAGES + image,
+                url: "http://localhost:5000/uploads/" + image,
             })),
         };
+
         res.send({
             status: "success",
             data: newData,
-        })
+        });
     } catch (error) {
+        console.log(error);
         res.status(500).send({
             status: "failed",
-            message: "Server error"
-        })
+            message: "Server error",
+        });
     }
-}
-
-// exports.addTrip = async (req, res) => {
-//     try {
-//         const allTrip = await trip.findAll()
-//         const isAlreadyExist = allTrip.find(field => req.body.title === field.title)
-
-//         const { image } = req.files
-//         const allImage = []
-//         for (let img of image) {
-//             allImage.push("http://localhost:5000/uploads/" + img.filename)
-//         }
-
-//         const imageFileToString = JSON.stringify(allImage)
-
-//         if (isAlreadyExist) {
-//             return res.status(400).send({
-//                 status: "failed",
-//                 message: "Trip name already exist"
-//             })
-//         }
-
-//         const data = await trip.create({
-//             ...req.body,
-//             image: imageFileToString
-//         })
-
-//         res.send({
-//             status: "success",
-//             message: "Add trip finished",
-//             data
-//         })
-//     } catch (error) {
-//         console.log(error)
-//         res.status(500).send({
-//             status: "failed",
-//             message: "Server error"
-//         })
-//     }
-// }
+};
 
 exports.updateTrip = async (req, res) => {
     const { id } = req.params;
-    const { image } = req.files
-    try {
-        await trip.update(
-            ...req.body, {
-            where: {
-                id
-            }
-        })
-        res.send({
-            status: "Success",
-            message: "Add Trip is Successfully"
-        })
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            status: "Failed",
-            message: "Add Trip Failed"
-        })
-    }
-}
 
-exports.deleteTrip = async (req, res) => {
     try {
-        const { id } = req.params;
-        await trip.destroy({
-            where: { id },
+        await trip.update(req.body, {
+            where: {
+                id,
+            },
         });
+
+        const updatedData = await trip.findOne({
+            where: {
+                id,
+            },
+            include: {
+                model: country,
+                as: "country",
+                attributes: {
+                    exclude: ["createdAt", "updatedAt"],
+                },
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "idCountry"],
+            },
+        });
+
         res.send({
             status: "success",
-            message: `delete trip id ${id} success`,
+            updatedData,
         });
     } catch (error) {
         console.log(error);
         res.status(500).send({
             status: "failed",
-            message: "server error",
+            message: "Server error",
+        });
+    }
+};
+
+exports.deleteTrip = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const data = await trip.findOne({
+            where: {
+                id,
+            },
+        });
+
+        const imageStringToArray = JSON.parse(data.image);
+
+        for (const item of imageStringToArray) {
+            fs.unlink("uploads/trips/" + item, (err) => {
+                if (err) throw err;
+            });
+        }
+
+        await trip.destroy({
+            where: {
+                id,
+            },
+        });
+        res.send({
+            status: "success",
+            message: "delete trip success",
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            status: "failed",
+            message: "Server error",
         });
     }
 };

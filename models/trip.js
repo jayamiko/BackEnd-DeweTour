@@ -28,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
     night: DataTypes.INTEGER,
     dateTrip: DataTypes.DATE,
     quota: DataTypes.INTEGER,
+    maxQuota: DataTypes.INTEGER,
     price: DataTypes.INTEGER,
     description: DataTypes.STRING,
     image: DataTypes.STRING

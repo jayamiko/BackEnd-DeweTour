@@ -1,136 +1,6 @@
 const { transaction, trip, user, country } = require('../../models')
 const Joi = require("joi")
 
-
-exports.getTransactions = async (req, res) => {
-    try {
-        let data = await transaction.findAll({
-            include: [
-                {
-                    model: user,
-                    as: "user",
-                    attributes: {
-                        exclude: [
-                            "updatedAt",
-                            "createdAt",
-                            "password",
-                            "status",
-                        ],
-                    },
-                },
-                {
-                    model: trip,
-                    as: "trip",
-
-                    attributes: {
-                        exclude: ["updatedAt", "createdAt"],
-                    },
-                    include: {
-                        model: country,
-                        as: "country",
-                        attributes: {
-                            exclude: ["updatedAt", "createdAt"],
-                        },
-                    },
-                    attributes: {
-                        exclude: [
-                            "createdAt",
-                            "updatedAt",
-                            "idCountry",
-                            "description",
-                            "image",
-                        ],
-                    },
-                },
-            ],
-            attributes: {
-                exclude: [
-                    "createdAt",
-                    "updatedAt",
-                    "tripId",
-                ]
-            }
-        });
-
-        data = JSON.parse(JSON.stringify(data));
-
-        const newData = data.map((item) => {
-            let attachment = item.attachment ?
-                "http://localhost:5000/uploads" + item.attachment
-                : null;
-
-            return {
-                id: item.id,
-                counterQty: item.counterQty,
-                total: item.total,
-                status: item.status,
-                attachment: attachment,
-                createdAt: item.createdAt,
-                trip: item.trip,
-                user: item.user,
-            };
-        })
-        res.send({
-            status: "success",
-            data: newData,
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            status: "error",
-            message: "server error",
-        });
-    }
-};
-
-exports.getTransaction = async (req, res) => {
-    const { id } = req.params
-    try {
-        const data = await transaction.findOne({
-            where: {
-                id
-            },
-            include: [
-                {
-                    model: user,
-                    as: "user",
-                    attributes: {
-                        exclude: [
-                            "updatedAt",
-                            "createdAt",
-                            "password",
-                            "status",
-                        ],
-                    },
-                },
-                {
-                    model: trip,
-                    as: "trip",
-                    attributes: {
-                        exclude: ["createdAt", "updatedAt"],
-                    },
-                },
-            ],
-            attributes: {
-                exclude: ["updatedAt", "userId", "tripId"],
-            }
-        });
-
-        res.send({
-            status: "success",
-            data,
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            status: "error",
-            message: "server error",
-        });
-    }
-};
-
 exports.addTransaction = async (req, res) => {
     const schema = Joi.object({
         counterQty: Joi.number().required(),
@@ -139,7 +9,9 @@ exports.addTransaction = async (req, res) => {
         userId: Joi.number().required(),
     });
 
-    const { error } = schema.validate(req.body)
+    const { error } = schema.validate(req.body);
+
+    // check if error return response 400
     if (error) {
         console.log(error);
         return res.status(400).send({
@@ -158,8 +30,8 @@ exports.addTransaction = async (req, res) => {
             ...data,
             userId: id,
             status: "Waiting Payment",
-            attachment: null
-        })
+            attachment: null,
+        });
 
         const transactionData = await transaction.findOne({
             where: {
@@ -184,11 +56,10 @@ exports.addTransaction = async (req, res) => {
             attributes: {
                 exclude: ["createdAt", "updatedAt", "userId", "tripId"],
             },
-        })
-
+        });
         res.send({
             status: "success",
-            message: "Your Payment is Succesfully",
+            message: "Book succesfull added to your transaction",
             data: transactionData,
         });
     } catch (error) {
@@ -199,6 +70,117 @@ exports.addTransaction = async (req, res) => {
         });
     }
 };
+
+exports.getTransactions = async (req, res) => {
+    try {
+        let data = await transaction.findAll({
+            include: [
+                {
+                    model: user,
+                    as: "user",
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "password", "status", "photo"],
+                    },
+                },
+                {
+                    model: trip,
+                    as: "trip",
+                    include: {
+                        model: country,
+                        as: "country",
+                        attributes: {
+                            exclude: ["createdAt", "updatedAt"],
+                        },
+                    },
+                    attributes: {
+                        exclude: [
+                            "createdAt",
+                            "updatedAt",
+                            "idCountry",
+                            "description",
+                            "image",
+                        ],
+                    },
+                },
+            ],
+            attributes: {
+                exclude: ["updatedAt", "userId", "tripId"],
+            },
+        });
+
+        data = JSON.parse(JSON.stringify(data));
+
+        const newData = data.map((item) => {
+            let attachment = item.attachment
+                ? "http://localhost:5000/uploads/" + item.attachment
+                : null;
+
+            return {
+                id: item.id,
+                counterQty: item.counterQty,
+                total: item.total,
+                status: item.status,
+                attachment: attachment,
+                createdAt: item.createdAt,
+                trip: item.trip,
+                user: item.user,
+            };
+        });
+
+        res.send({
+            status: "success",
+            data: newData,
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            status: "failed",
+            message: "Server error",
+        });
+    }
+};
+
+exports.getTransaction = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const data = await transaction.findOne({
+            where: {
+                id,
+            },
+            include: [
+                {
+                    model: user,
+                    as: "user",
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "password", "status"],
+                    },
+                },
+                {
+                    model: trip,
+                    as: "trip",
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt"],
+                    },
+                },
+            ],
+            attributes: {
+                exclude: ["updatedAt", "userId", "tripId"],
+            },
+        });
+        res.send({
+            status: "success",
+            data,
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            status: "failed",
+            message: "Server error",
+        });
+    }
+};
+
 
 exports.updatePay = async (req, res) => {
     const { id } = req.params;
@@ -243,15 +225,10 @@ exports.updatePay = async (req, res) => {
                             "updatedAt",
                             "idCountry",
                             "description",
-                            "quota",
-                            "image",
                         ],
                     },
                 },
             ],
-            attributes: {
-                exclude: ["updatedAt", "userId", "tripId"],
-            },
         })
         res.send({
             status: "Success",

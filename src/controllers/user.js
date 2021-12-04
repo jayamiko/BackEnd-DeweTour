@@ -1,67 +1,78 @@
 const { user } = require('../../models');
-
+const fs = require("fs");
 
 exports.getUsers = async (req, res) => {
-    const id = req.user
     try {
         let data = await user.findAll({
             attributes: {
-                exclude: ["updatedAt", "createdAt", "password"]
-            }
-        })
+                exclude: ["createdAt", "updatedAt", "password"],
+            },
+        });
 
-        const dataUsers = []
-        for (let i = 0; i < data.length; i++) {
-            let j = {
-                id: data[i].id,
-                name: data[i].name,
-                email: data[i].email,
-                status: data[i].status,
-                phone: data[i].phone,
-                address: data[i].address,
-                photo: "http://localhost:5000/uploads/" + data[i].photo
-            }
-            dataUsers.push(j)
-        }
+        data = JSON.parse(JSON.stringify(data));
+        const newData = data.map((item) => {
+            const photo = item.photo
+                ? "http://localhost:5000/uploads/" + item.photo
+                : "http://localhost:5000/uploads/" + "no-photo.jpg";
+
+            return {
+                id: item.id,
+                email: item.email,
+                name: item.name,
+                phone: item.phone,
+                address: item.address,
+                photo: photo,
+            };
+        });
 
         res.send({
             status: "success",
-            data: dataUsers
-        })
+            data: newData,
+        });
     } catch (error) {
         console.log(error);
-        res.status(500), send({
+        res.status(500).send({
             status: "failed",
-            message: "Server Error"
-        })
+            message: "Server error",
+        });
     }
-}
+};
 
 exports.getUser = async (req, res) => {
-    // const { id } = req.params
-    const { id } = req.user
-    const { photo } = req.files
+    const { id } = req.params;
+
     try {
         let data = await user.findOne({
-            ...req.body,
-            photo: "http://localhost:5000/uploads/" + photo[0].filename
-        }, {
             where: {
-                id
-            }
-        })
+                id,
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "password"],
+            },
+        });
+
+        data = JSON.parse(JSON.stringify(data));
+        const photo = data.photo
+            ? "http://localhost:5000/uploads/" + data.photo
+            : "http://localhost:5000/uploads/" + "no-photo.jpg";
+
+        const newData = {
+            ...data,
+            photo: photo,
+        };
+
         res.send({
             status: "success",
-            data,
-        })
+            data: newData,
+        });
     } catch (error) {
         console.log(error);
-        res.status(500), send({
+        res.status(500).send({
             status: "failed",
-            message: "Server Error"
-        })
+            message: "Server error",
+        });
     }
-}
+};
 
 exports.addUsers = async (req, res) => {
     try {
@@ -78,52 +89,65 @@ exports.addUsers = async (req, res) => {
         })
     }
 }
+
 exports.updateUser = async (req, res) => {
-    const { id } = req.user
-    const { photo } = req.files
+    const { id } = req.params;
+
+    const data = {
+        photo: req.files.photo[0].filename,
+    };
+
     try {
-        await user.update(
-            {
-                ...req.body,
-                photo: "http://localhost:3000/uploads/" + photo[0].filename
-            }, {
+        const userData = await user.findOne({
             where: {
-                id
-            }
-        })
+                id,
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt"],
+            },
+        });
+
+        if (userData.photo !== null) {
+            fs.unlink("uploads/" + userData.photo, (err) => {
+                if (err) throw err;
+            });
+        }
+
+        await user.update(data, {
+            where: {
+                id,
+            },
+        });
+
+        let updatedData = await user.findOne({
+            where: {
+                id,
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt"],
+            },
+        });
+
+        updatedData = JSON.parse(JSON.stringify(updatedData));
+        const newUpdatedData = {
+            ...updatedData,
+            photo: "http://localhost:5000/uploads/" + updatedData.photo,
+        };
 
         res.send({
-            status: "Success",
-            message: "Update is Successfully"
-        })
-
+            status: "success",
+            data: {
+                user: newUpdatedData,
+            },
+        });
     } catch (error) {
         console.log(error);
-        res.status(500), send({
+        res.status(500).send({
             status: "failed",
-            message: "Server Error"
-        })
+            message: "Server error",
+        });
     }
-}
-
-// exports.updateUserById = async (req, res) => {
-//     try {
-//         const { id } = req.params
-
-//         await user.update({ ...req.body }, {
-//             where: {
-//                 id
-//             }
-//         })
-
-//         res.send({
-//             status: 'success',
-//             message: `Update user id: ${id} finished`
-//         })
-//     } catch (error) {
-//         console.log(error)
-//     }
-// }
+};
 
 exports.deleteUser = async (req, res) => {
     const { id } = req.params
