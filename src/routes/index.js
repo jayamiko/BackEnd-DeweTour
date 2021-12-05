@@ -26,7 +26,7 @@ router.delete('/countries/:id', auth, adminOnly, deleteCountry)
 
 // Route Trips
 router.get('/trips', getTrips)
-router.get('/trip/:id', auth, getTrip)
+router.get('/trip/:id', getTrip)
 router.post('/trip', uploadsFile("image"), addTrip)
 router.put('/trip/:id', auth, updateTrip)
 router.delete('/trip/:id', auth, adminOnly, deleteTrip)
@@ -43,6 +43,7 @@ router.put(
 router.put(
     "/transactions/confirm/:id",
     auth,
+    adminOnly,
     updateConfirmTransaction
 );
 router.delete('/transaction/:id', auth, deleteTransaction)

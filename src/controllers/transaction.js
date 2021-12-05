@@ -253,7 +253,7 @@ exports.updateConfirmTransaction = async (req, res) => {
             },
         });
 
-        const updateData = await transaction.findOne({
+        const updatedData = await transaction.findOne({
             where: {
                 id,
             },
