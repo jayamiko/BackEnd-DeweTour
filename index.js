@@ -13,6 +13,7 @@ app.use('/uploads', express.static('uploads'))
 
 app.use('/api/v1/', router)
 
+// Listen PORT
 app.listen(PORT, () => {
     console.log(('Server Running on Port: ', PORT));
 })
