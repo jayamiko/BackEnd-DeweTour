@@ -9,6 +9,7 @@ exports.addTransaction = async (req, res) => {
         userId: Joi.number().required(),
     });
 
+    // Error
     const { error } = schema.validate(req.body);
 
     // check if error return response 400
